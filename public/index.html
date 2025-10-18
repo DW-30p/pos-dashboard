@@ -6,29 +6,17 @@
     <title>Dashboard POS - Colmado Gerardo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .stat-card {
-            transition: transform 0.2s;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .tab-button.active { @apply border-blue-600 text-blue-600; }
+        .tab-button { @apply border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700; }
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .truncate-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .truncate-cell:hover { white-space: normal; overflow: visible; }
+        .quick-filter-btn { @apply px-3 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 transition-colors; }
     </style>
 </head>
 <body class="bg-gray-100">
-    
-    <!-- Header -->
+
     <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-6">
             <h1 class="text-3xl font-bold">📊 Colmado Gerardo</h1>
@@ -36,516 +24,134 @@
         </div>
     </div>
 
-    <!-- Navigation Tabs -->
     <div class="bg-white shadow sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex space-x-1 overflow-x-auto">
-                <button onclick="switchTab('overview')" id="tab-overview" class="tab-button active px-6 py-4 text-sm font-medium border-b-2 transition-colors">
-                    📈 Resumen
-                </button>
-                <button onclick="switchTab('sales')" id="tab-sales" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">
-                    🛒 Ventas
-                </button>
-                <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">
-                    📦 Inventario
-                </button>
-                <button onclick="switchTab('reports')" id="tab-reports" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">
-                    📊 Reportes
-                </button>
+                <button onclick="switchTab('overview')" id="tab-overview" class="tab-button active px-6 py-4 text-sm font-medium border-b-2 transition-colors">📈 Resumen</button>
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">🛒 Ventas</button>
+                <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">📦 Inventario</button>
+                <button onclick="switchTab('fiados')" id="tab-fiados" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">💳 Fiados</button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="tab-button px-6 py-4 text-sm font-medium border-b-2 transition-colors">📊 Reportes</button>
             </div>
         </div>
     </div>
 
-    <!-- Date Selector -->
-    <div class="max-w-7xl mx-auto px-4 py-4">
-        <div class="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4 items-end">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+    <div id="date-selector-bar" class="max-w-7xl mx-auto px-4 py-4">
+        <div class="bg-white rounded-lg shadow p-4 flex flex-col md:flex-row gap-4 items-center flex-wrap">
+            <div class="w-full md:flex-1">
+                <label for="start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
                 <input type="date" id="start-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
             </div>
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+            <div class="w-full md:flex-1">
+                <label for="end-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
                 <input type="date" id="end-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
             </div>
-            <button onclick="loadData()" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
-                🔄 Actualizar
-            </button>
+            <div class="w-full md:w-auto flex flex-col md:flex-row gap-2 items-center md:items-end">
+                <button onclick="loadData()" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">
+                    🔄 Actualizar
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="setDates('today')" class="quick-filter-btn">Hoy</button>
+                    <button onclick="setDates('this_month')" class="quick-filter-btn">Este Mes</button>
+                    <button onclick="setDates('last_month')" class="quick-filter-btn">Mes Pasado</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Content Area -->
     <div class="max-w-7xl mx-auto px-4 py-6">
-        
-        <!-- OVERVIEW TAB -->
+
         <div id="content-overview" class="tab-content">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <div class="stat-card bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium">Ventas del Período</p>
-                            <p class="text-2xl font-bold mt-2" id="stat-sales">RD$ 0.00</p>
-                            <p class="text-sm text-gray-400 mt-1" id="stat-sales-count">0 ventas</p>
-                        </div>
-                        <div class="text-4xl">💰</div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium">Ventas del Período</p>
+                    <p class="text-2xl font-bold mt-2" id="stat-sales">RD$ 0.00</p>
+                    <p class="text-sm text-gray-400 mt-1" id="stat-sales-count">0 ventas</p>
                 </div>
-
                 <div class="stat-card bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium">Ganancia</p>
-                            <p class="text-2xl font-bold mt-2" id="stat-profit">RD$ 0.00</p>
-                            <p class="text-sm text-gray-400 mt-1" id="stat-margin">0% margen</p>
-                        </div>
-                        <div class="text-4xl">📈</div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium">Ganancia (Período)</p>
+                    <p class="text-2xl font-bold mt-2" id="stat-profit">RD$ 0.00</p>
+                    <p class="text-sm text-gray-400 mt-1" id="stat-margin">0% margen</p>
                 </div>
-
                 <div class="stat-card bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium">Caja Actual</p>
-                            <p class="text-2xl font-bold mt-2" id="stat-cash">RD$ 0.00</p>
-                            <p class="text-sm text-gray-400 mt-1">Balance efectivo</p>
-                        </div>
-                        <div class="text-4xl">💵</div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium">Caja Calculada (Período)</p>
+                    <p class="text-2xl font-bold mt-2" id="stat-cash">RD$ 0.00</p>
+                    <p class="text-sm text-gray-400 mt-1">Presup. + Efectivo - Desemb.</p>
                 </div>
-
                 <div class="stat-card bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium">Fiados</p>
-                            <p class="text-2xl font-bold mt-2" id="stat-fiados">RD$ 0.00</p>
-                            <p class="text-sm text-gray-400 mt-1">Por cobrar</p>
-                        </div>
-                        <div class="text-4xl">💳</div>
+                    <p class="text-gray-500 text-sm font-medium">Fiados (Total)</p>
+                    <p class="text-2xl font-bold mt-2" id="stat-fiados">RD$ 0.00</p>
+                    <p class="text-sm text-gray-400 mt-1">Por cobrar</p>
+                </div>
+                <div class="stat-card bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
+                    <p class="text-gray-500 text-sm font-medium">Valor Inventario</p>
+                    <p class="text-2xl font-bold mt-2" id="stat-inventory-value">RD$ 0.00</p>
+                    <p class="text-sm text-gray-400 mt-1">Costo total actual</p>
+                </div>
+                </div>
+            <div id="daily-cash-summary" class="bg-white rounded-lg shadow p-6 mb-6" style="display: none;">
+                <h3 class="text-lg font-semibold mb-4 text-indigo-800">Resumen de Caja del Día</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 font-medium">Presupuesto Inicial</p>
+                        <p class="text-xl font-bold mt-1 text-gray-800" id="daily-initial">RD$ 0.00</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-green-600 font-medium">Ventas en Efectivo</p>
+                        <p class="text-xl font-bold mt-1 text-green-800" id="daily-cash-sales">RD$ 0.00</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <p class="text-sm text-red-600 font-medium">Desembolsos</p>
+                        <p class="text-xl font-bold mt-1 text-red-800" id="daily-disbursements">RD$ 0.00</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-600 font-medium">Efectivo Esperado</p>
+                        <p class="text-xl font-bold mt-1 text-blue-800" id="daily-expected">RD$ 0.00</p>
                     </div>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Top Products -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">🏆 Productos Más Vendidos</h3>
-                    <div id="top-products" class="space-y-3">
-                        <div class="text-center py-8 text-gray-400">Cargando...</div>
-                    </div>
+                    <h3 class="text-lg font-semibold mb-4">🏆 Productos Más Vendidos (Período)</h3>
+                    <div id="top-products" class="space-y-3 max-h-96 overflow-y-auto"></div>
                 </div>
-
-                <!-- Recent Sales -->
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">🛒 Últimas Ventas</h3>
-                    <div id="recent-sales" class="space-y-3">
-                        <div class="text-center py-8 text-gray-400">Cargando...</div>
-                    </div>
+                    <h3 class="text-lg font-semibold mb-4">🛒 Últimas Ventas (Global)</h3>
+                    <div id="recent-sales" class="space-y-3 max-h-96 overflow-y-auto"></div>
                 </div>
             </div>
-
-            <!-- Low Stock Alert -->
             <div id="low-stock-alert" class="mt-6" style="display: none;">
                 <div class="bg-red-50 border border-red-200 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-red-800 mb-4">⚠️ Alerta: Productos con Stock Bajo</h3>
-                    <div id="low-stock-list" class="space-y-2"></div>
+                    <div id="low-stock-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
                 </div>
             </div>
         </div>
 
-        <!-- SALES TAB -->
         <div id="content-sales" class="tab-content" style="display: none;">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-6">📋 Historial de Ventas</h2>
-                
+             <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-6">📋 Historial de Ventas (Período)</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventory-table" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-400">Cargando inventario...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- REPORTS TAB -->
-        <div id="content-reports" class="tab-content" style="display: none;">
-            <div class="space-y-6">
-                <!-- Profit Report -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">💹 Reporte de Ganancias</h3>
-                    <div id="profit-report" class="overflow-x-auto">
-                        <div class="text-center py-8 text-gray-400">Cargando reporte...</div>
-                    </div>
-                </div>
-
-                <!-- Sales by Payment Method -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold mb-4">💳 Ventas por Método de Pago</h3>
-                    <div id="payment-methods" class="space-y-3">
-                        <div class="text-center py-8 text-gray-400">Cargando...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-500 text-sm">
-        <p>© 2025 Colmado Gerardo - Dashboard POS</p>
-        <p class="mt-1">Última actualización: <span id="last-update">--</span></p>
-    </div>
-
-    <script>
-        // Configuration
-        const API_URL = window.location.origin + '/api';
-        
-        // Initialize dates to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('start-date').value = today;
-        document.getElementById('end-date').value = today;
-
-        // Tab switching
-        function switchTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.style.display = 'none';
-            });
-            
-            // Remove active class from all buttons
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active', 'border-blue-600', 'text-blue-600');
-                button.classList.add('border-transparent', 'text-gray-500');
-            });
-            
-            // Show selected tab
-            document.getElementById('content-' + tabName).style.display = 'block';
-            
-            // Add active class to selected button
-            const activeButton = document.getElementById('tab-' + tabName);
-            activeButton.classList.add('active', 'border-blue-600', 'text-blue-600');
-            activeButton.classList.remove('border-transparent', 'text-gray-500');
-            
-            // Load data for specific tabs
-            if (tabName === 'sales') loadSales();
-            if (tabName === 'inventory') loadInventory();
-            if (tabName === 'reports') loadReports();
-        }
-
-        // Format currency
-        function formatCurrency(amount) {
-            return 'RD$ ' + parseFloat(amount).toLocaleString('es-DO', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-            });
-        }
-
-        // Format date
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('es-DO') + ' ' + date.toLocaleTimeString('es-DO', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-        }
-
-        // Load dashboard stats
-        async function loadDashboardStats() {
-            try {
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
-                
-                const response = await fetch(`${API_URL}/dashboard/stats?start_date=${startDate}&end_date=${endDate}`);
-                const data = await response.json();
-                
-                // Update stats cards
-                document.getElementById('stat-sales').textContent = formatCurrency(data.sales.total_sales || 0);
-                document.getElementById('stat-sales-count').textContent = `${data.sales.sales_count || 0} ventas`;
-                
-                document.getElementById('stat-profit').textContent = formatCurrency(data.profit.total_profit || 0);
-                const margin = data.sales.total_sales > 0 ? 
-                    ((data.profit.total_profit / data.sales.total_sales) * 100).toFixed(1) : 0;
-                document.getElementById('stat-margin').textContent = `${margin}% margen`;
-                
-                document.getElementById('stat-cash').textContent = formatCurrency(data.cashRegister || 0);
-                document.getElementById('stat-fiados').textContent = formatCurrency(data.fiados || 0);
-                
-                // Update top products
-                const topProductsHTML = data.topProducts.length > 0 ? 
-                    data.topProducts.map(product => `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 transition">
-                            <div>
-                                <p class="font-medium">${product.product_name}</p>
-                                <p class="text-sm text-gray-500">${product.total_quantity} unidades</p>
-                            </div>
-                            <p class="font-semibold text-green-600">${formatCurrency(product.total_revenue)}</p>
-                        </div>
-                    `).join('') :
-                    '<div class="text-center py-4 text-gray-400">No hay datos</div>';
-                document.getElementById('top-products').innerHTML = topProductsHTML;
-                
-                // Update recent sales
-                const recentSalesHTML = data.recentSales.length > 0 ?
-                    data.recentSales.map(sale => `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 transition">
-                            <div>
-                                <p class="font-medium">${sale.ncf || 'Sin NCF'}</p>
-                                <p class="text-sm text-gray-500">${formatDate(sale.date)}</p>
-                            </div>
-                            <p class="font-semibold">${formatCurrency(sale.total)}</p>
-                        </div>
-                    `).join('') :
-                    '<div class="text-center py-4 text-gray-400">No hay ventas recientes</div>';
-                document.getElementById('recent-sales').innerHTML = recentSalesHTML;
-                
-                // Update low stock alert
-                if (data.lowStock.length > 0) {
-                    document.getElementById('low-stock-alert').style.display = 'block';
-                    const lowStockHTML = data.lowStock.map(product => `
-                        <div class="flex items-center justify-between text-sm p-2 bg-white rounded">
-                            <span class="font-medium">${product.name}</span>
-                            <span class="text-red-600">Stock: ${product.stock} (Mín: ${product.min_stock})</span>
-                        </div>
-                    `).join('');
-                    document.getElementById('low-stock-list').innerHTML = lowStockHTML;
-                } else {
-                    document.getElementById('low-stock-alert').style.display = 'none';
-                }
-                
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                alert('Error al cargar los datos del dashboard');
-            }
-        }
-
-        // Load sales
-        async function loadSales() {
-            try {
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
-                
-                const response = await fetch(`${API_URL}/sales?start_date=${startDate}&end_date=${endDate}&limit=100`);
-                const data = await response.json();
-                
-                const salesHTML = data.sales.length > 0 ?
-                    data.sales.map(sale => `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm font-medium">${sale.ncf || 'Sin NCF'}</td>
-                            <td class="px-4 py-3 text-sm">${formatDate(sale.date)}</td>
-                            <td class="px-4 py-3 text-sm">${sale.customer_name || 'Cliente general'}</td>
-                            <td class="px-4 py-3 text-sm text-right font-medium">${formatCurrency(sale.total)}</td>
-                            <td class="px-4 py-3 text-sm text-right">
-                                <span class="px-2 py-1 text-xs rounded-full ${
-                                    sale.payment_method === 'cash' ? 'bg-green-100 text-green-800' : 
-                                    sale.payment_method === 'card' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-gray-100 text-gray-800'
-                                }">
-                                    ${sale.payment_method === 'cash' ? '💵 Efectivo' : 
-                                      sale.payment_method === 'card' ? '💳 Tarjeta' : 
-                                      sale.payment_method}
-                                </span>
-                            </td>
-                        </tr>
-                    `).join('') :
-                    '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay ventas en este período</td></tr>';
-                
-                document.getElementById('sales-table').innerHTML = salesHTML;
-                
-            } catch (error) {
-                console.error('Error loading sales:', error);
-                document.getElementById('sales-table').innerHTML = 
-                    '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error al cargar ventas</td></tr>';
-            }
-        }
-
-        // Load inventory
-        async function loadInventory() {
-            try {
-                // Load stats
-                const statsResponse = await fetch(`${API_URL}/products/stats`);
-                const stats = await statsResponse.json();
-                
-                document.getElementById('inv-total').textContent = stats.total || 0;
-                document.getElementById('inv-low').textContent = stats.lowStock || 0;
-                document.getElementById('inv-out').textContent = stats.outOfStock || 0;
-                
-                // Load products
-                const productsResponse = await fetch(`${API_URL}/products`);
-                const products = await productsResponse.json();
-                
-                displayProducts(products);
-                
-            } catch (error) {
-                console.error('Error loading inventory:', error);
-                document.getElementById('inventory-table').innerHTML = 
-                    '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error al cargar inventario</td></tr>';
-            }
-        }
-
-        // Display products
-        function displayProducts(products) {
-            const inventoryHTML = products.length > 0 ?
-                products.map(product => {
-                    let statusClass = 'bg-green-100 text-green-800';
-                    let statusText = '✅ Normal';
-                    
-                    if (product.stock === 0) {
-                        statusClass = 'bg-red-100 text-red-800';
-                        statusText = '❌ Agotado';
-                    } else if (product.stock <= product.min_stock) {
-                        statusClass = 'bg-yellow-100 text-yellow-800';
-                        statusText = '⚠️ Bajo';
-                    }
-                    
-                    return `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm font-medium">${product.name}</td>
-                            <td class="px-4 py-3 text-sm">${product.category_name || 'Sin categoría'}</td>
-                            <td class="px-4 py-3 text-sm text-right">${product.stock}</td>
-                            <td class="px-4 py-3 text-sm text-right">${formatCurrency(product.price)}</td>
-                            <td class="px-4 py-3 text-sm text-right">
-                                <span class="px-2 py-1 text-xs rounded-full ${statusClass}">
-                                    ${statusText}
-                                </span>
-                            </td>
-                        </tr>
-                    `;
-                }).join('') :
-                '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay productos</td></tr>';
-            
-            document.getElementById('inventory-table').innerHTML = inventoryHTML;
-        }
-
-        // Search products
-        document.getElementById('search-product').addEventListener('input', async (e) => {
-            const search = e.target.value;
-            
-            if (search.length < 2 && search.length > 0) return;
-            
-            try {
-                const url = search ? `${API_URL}/products?search=${encodeURIComponent(search)}` : `${API_URL}/products`;
-                const response = await fetch(url);
-                const products = await response.json();
-                displayProducts(products);
-            } catch (error) {
-                console.error('Error searching products:', error);
-            }
-        });
-
-        // Load reports
-        async function loadReports() {
-            try {
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
-                
-                // Profit report
-                const profitResponse = await fetch(`${API_URL}/reports/profit?start_date=${startDate}&end_date=${endDate}`);
-                const profitData = await profitResponse.json();
-                
-                const profitHTML = profitData.length > 0 ? `
-                    <table class="min-w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ingresos</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costos</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ganancia</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Margen</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${profitData.map(row => `
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm">${new Date(row.sale_date).toLocaleDateString('es-DO')}</td>
-                                    <td class="px-4 py-3 text-sm text-right">${formatCurrency(row.total_revenue)}</td>
-                                    <td class="px-4 py-3 text-sm text-right text-red-600">${formatCurrency(row.total_cost)}</td>
-                                    <td class="px-4 py-3 text-sm text-right font-medium text-green-600">${formatCurrency(row.total_profit)}</td>
-                                    <td class="px-4 py-3 text-sm text-right font-bold">${row.profit_margin}%</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                ` : '<div class="text-center py-8 text-gray-400">No hay datos de ganancias</div>';
-                
-                document.getElementById('profit-report').innerHTML = profitHTML;
-                
-                // Payment methods
-                const paymentResponse = await fetch(`${API_URL}/reports/payment-methods?start_date=${startDate}&end_date=${endDate}`);
-                const paymentData = await paymentResponse.json();
-                
-                const paymentHTML = paymentData.length > 0 ?
-                    paymentData.map(method => `
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded">
-                            <div>
-                                <p class="font-medium">
-                                    ${method.payment_method === 'cash' ? '💵 Efectivo' : 
-                                      method.payment_method === 'card' ? '💳 Tarjeta' : 
-                                      method.payment_method}
-                                </p>
-                                <p class="text-sm text-gray-500">${method.transaction_count} transacciones</p>
-                            </div>
-                            <p class="text-xl font-bold">${formatCurrency(method.total_amount)}</p>
-                        </div>
-                    `).join('') :
-                    '<div class="text-center py-8 text-gray-400">No hay datos</div>';
-                
-                document.getElementById('payment-methods').innerHTML = paymentHTML;
-                
-            } catch (error) {
-                console.error('Error loading reports:', error);
-            }
-        }
-
-        // Main load function
-        async function loadData() {
-            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('es-DO');
-            await loadDashboardStats();
-        }
-
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            
-            // Auto refresh every 5 minutes
-            setInterval(loadData, 300000);
-        });
-    </script>
-
-</body>
-</html>500 uppercase">NCF</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Productos</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Método</th>
                             </tr>
                         </thead>
                         <tbody id="sales-table" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-400">Cargando ventas...</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- INVENTORY TAB -->
         <div id="content-inventory" class="tab-content" style="display: none;">
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-bold mb-6">📦 Inventario de Productos</h2>
-                
-                <!-- Inventory Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-indigo-50 p-4 rounded-lg">
                         <p class="text-sm text-indigo-600 font-medium">Total Productos</p>
@@ -560,13 +166,442 @@
                         <p class="text-2xl font-bold mt-1" id="inv-out">0</p>
                     </div>
                 </div>
-
                 <div class="mb-4">
                     <input type="text" id="search-product" placeholder="🔍 Buscar producto..." class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
                 </div>
-
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-fiados" class="tab-content" style="display: none;">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-6">💳 Clientes con Deuda (Fiados)</h2>
+                <p class="text-sm text-gray-600 mb-4">Esta lista muestra el balance total pendiente de todos los clientes.</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cédula</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto Pendiente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fiados-table" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="content-reports" class="tab-content" style="display: none;">
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">💹 Reporte de Ganancia Real (Período)</h3>
+                    <div id="profit-report" class="overflow-x-auto"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">💸 Análisis de Desembolsos (Período)</h3>
+                    <div id="disbursements-report" class="space-y-4"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">👨‍💼 Rendimiento por Vendedor (Período)</h3>
+                    <div id="sales-by-user-report" class="overflow-x-auto"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">🧊 Productos Estancados (No vendidos en el período)</h3>
+                    <div id="stagnant-products-report" class="overflow-x-auto"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">💳 Ventas por Método de Pago (Período)</h3>
+                    <div id="payment-methods" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-500 text-sm">
+        <p>© 2025 Colmado Gerardo - Dashboard POS</p>
+        <p class="mt-1">Última actualización: <span id="last-update">--</span></p>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = window.location.origin + '/api';
+
+        // Formato de Moneda
+        function formatCurrency(amount) {
+            // Asegurarse de que amount sea un número
+            const numericAmount = parseFloat(amount);
+            if (isNaN(numericAmount)) {
+                return 'RD$ 0.00'; // O algún valor por defecto o mensaje de error
+            }
+            return 'RD$ ' + numericAmount.toLocaleString('es-DO', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+
+        // Formato de Fecha
+        function formatDate(dateString) {
+            try {
+                // Intentar crear un objeto Date. Si falla, devolver string original o N/A.
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return dateString || 'N/A';
+                }
+                return date.toLocaleDateString('es-DO') + ' ' + date.toLocaleTimeString('es-DO', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateString || 'N/A'; // Devolver el string original si hay error
+            }
+        }
+
+
+        // Filtros Rápidos de Fecha
+        function setDates(preset) {
+            const today = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (preset === 'today') { }
+            else if (preset === 'this_month') { start = new Date(today.getFullYear(), today.getMonth(), 1); }
+            else if (preset === 'last_month') { start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); }
+
+            document.getElementById('start-date').value = start.toISOString().split('T')[0];
+            document.getElementById('end-date').value = end.toISOString().split('T')[0];
+            loadData();
+        }
+        setDates('today'); // Inicializar
+
+        // Navegación de Pestañas
+        function switchTab(tabName) {
+            const dateSelector = document.getElementById('date-selector-bar');
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById('content-' + tabName).style.display = 'block';
+            document.getElementById('tab-' + tabName).classList.add('active');
+            dateSelector.style.display = (tabName === 'inventory' || tabName === 'fiados') ? 'none' : 'block';
+            if (tabName === 'sales') loadSales();
+            if (tabName === 'inventory') loadInventory();
+            if (tabName === 'fiados') loadFiados();
+            if (tabName === 'reports') loadReports();
+        }
+
+        // Cargar Resumen (Overview - ACTUALIZADO)
+        async function loadDashboardStats() {
+            try {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                const response = await fetch(`${API_URL}/dashboard/stats?start_date=${startDate}&end_date=${endDate}`);
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                const data = await response.json();
+
+                document.getElementById('stat-sales').textContent = formatCurrency(data.sales.total_sales);
+                document.getElementById('stat-sales-count').textContent = `${data.sales.sales_count || 0} ventas`;
+
+                document.getElementById('stat-profit').textContent = formatCurrency(data.profit.total_profit);
+                const margin = data.sales.total_subtotal > 0 ?
+                    ((data.profit.total_profit / data.sales.total_subtotal) * 100).toFixed(1) : 0;
+                document.getElementById('stat-margin').textContent = `${margin}% margen`;
+
+                document.getElementById('stat-cash').textContent = formatCurrency(data.calculatedPeriodBalance);
+                document.getElementById('stat-fiados').textContent = formatCurrency(data.fiados);
+                // --- CAMBIO AQUÍ: Mostrar valor de inventario ---
+                document.getElementById('stat-inventory-value').textContent = formatCurrency(data.inventoryValue);
+                // --- FIN CAMBIO ---
+
+                const dailySummaryEl = document.getElementById('daily-cash-summary');
+                if (data.dailyCash && data.dailyCash.is_daily) {
+                    dailySummaryEl.style.display = 'block';
+                    document.getElementById('daily-initial').textContent = formatCurrency(data.dailyCash.initial_budget);
+                    document.getElementById('daily-cash-sales').textContent = formatCurrency(data.dailyCash.cash_sales);
+                    document.getElementById('daily-disbursements').textContent = formatCurrency(data.dailyCash.total_disbursements);
+                    document.getElementById('daily-expected').textContent = formatCurrency(data.dailyCash.expected_cash);
+                } else {
+                    dailySummaryEl.style.display = 'none';
+                }
+
+                const topProductsHTML = data.topProducts.length > 0 ?
+                    data.topProducts.map(p => `<div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100"><div><p class="font-medium">${p.product_name}</p><p class="text-sm text-gray-500">${p.total_quantity} unidades</p></div><p class="font-semibold text-green-600">${formatCurrency(p.total_revenue)}</p></div>`).join('')
+                    : '<div class="text-center py-4 text-gray-400">No hay datos</div>';
+                document.getElementById('top-products').innerHTML = topProductsHTML;
+
+                const recentSalesHTML = data.recentSales.length > 0 ?
+                    data.recentSales.map(s => `<div class="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100"><div><p class="font-medium">${s.ncf || 'Sin NCF'}</p><p class="text-sm text-gray-500">${formatDate(s.date)}</p></div><p class="font-semibold">${formatCurrency(s.total)}</p></div>`).join('')
+                    : '<div class="text-center py-4 text-gray-400">No hay ventas recientes</div>';
+                document.getElementById('recent-sales').innerHTML = recentSalesHTML;
+
+                if (data.lowStock.length > 0) {
+                    document.getElementById('low-stock-alert').style.display = 'block';
+                    document.getElementById('low-stock-list').innerHTML = data.lowStock.map(p => `<div class="flex items-center justify-between text-sm p-2 bg-white rounded"><span class="font-medium">${p.name}</span><span class="text-red-600">Stock: ${p.stock} (Mín: ${p.min_stock})</span></div>`).join('');
+                } else {
+                    document.getElementById('low-stock-alert').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // --- El resto de las funciones (loadSales, loadInventory, loadFiados, loadReports, loadData) ---
+        // --- permanecen igual que en la versión anterior ---
+        // Cargar Ventas
+        async function loadSales() {
+            const tableBody = document.getElementById('sales-table');
+            tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Cargando ventas...</td></tr>';
+            try {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+                const response = await fetch(`${API_URL}/sales?start_date=${startDate}&end_date=${endDate}&limit=100`);
+                const data = await response.json();
+
+                tableBody.innerHTML = data.sales.length > 0 ?
+                    data.sales.map(sale => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm">${formatDate(sale.date)}</td>
+                            <td class="px-4 py-3 text-sm">${sale.customer_name || 'Cliente general'}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600"><div class="truncate-cell" title="${sale.items_summary || ''}">${sale.items_summary || 'N/A'}</div></td>
+                            <td class="px-4 py-3 text-sm text-right font-medium">${formatCurrency(sale.total)}</td>
+                            <td class="px-4 py-3 text-sm text-right"><span class="px-2 py-1 text-xs rounded-full ${sale.payment_method === 'cash' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${sale.payment_method || 'N/A'}</span></td>
+                        </tr>`).join('') :
+                    '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay ventas en este período</td></tr>';
+            } catch (error) {
+                console.error('Error loading sales:', error);
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error al cargar ventas</td></tr>';
+            }
+        }
+
+        // Cargar Inventario
+        async function loadInventory() {
+            const tableBody = document.getElementById('inventory-table');
+            tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Cargando inventario...</td></tr>';
+            try {
+                const statsResponse = await fetch(`${API_URL}/products/stats`);
+                const stats = await statsResponse.json();
+                document.getElementById('inv-total').textContent = stats.total || 0;
+                document.getElementById('inv-low').textContent = stats.lowStock || 0;
+                document.getElementById('inv-out').textContent = stats.outOfStock || 0;
+
+                const productsResponse = await fetch(`${API_URL}/products`);
+                const products = await productsResponse.json();
+                displayProducts(products);
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">Error al cargar inventario</td></tr>';
+            }
+        }
+
+        // Renderizar Productos
+        function displayProducts(products) {
+            const inventoryHTML = products.length > 0 ?
+                products.map(product => {
+                    let statusClass = 'bg-green-100 text-green-800', statusText = '✅ Normal';
+                    if (product.stock == 0) { statusClass = 'bg-red-100 text-red-800'; statusText = '❌ Agotado'; }
+                    else if (product.stock <= product.min_stock) { statusClass = 'bg-yellow-100 text-yellow-800'; statusText = '⚠️ Bajo'; }
+                    return `<tr class="hover:bg-gray-50"><td class="px-4 py-3 text-sm font-medium">${product.name}</td><td class="px-4 py-3 text-sm">${product.category_name || 'Sin categoría'}</td><td class="px-4 py-3 text-sm text-right">${product.stock}</td><td class="px-4 py-3 text-sm text-right">${formatCurrency(product.price)}</td><td class="px-4 py-3 text-sm text-right"><span class="px-2 py-1 text-xs rounded-full ${statusClass}">${statusText}</span></td></tr>`;
+                }).join('') : '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No hay productos</td></tr>';
+            document.getElementById('inventory-table').innerHTML = inventoryHTML;
+        }
+
+        // Búsqueda en Inventario
+        let searchTimeout;
+        document.getElementById('search-product').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const search = e.target.value;
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const url = search ? `${API_URL}/products?search=${encodeURIComponent(search)}` : `${API_URL}/products`;
+                    const response = await fetch(url);
+                    const products = await response.json();
+                    displayProducts(products);
+                } catch (error) { console.error('Error searching products:', error); }
+            }, 300);
+        });
+
+        // Cargar Fiados
+        async function loadFiados() {
+            const tableBody = document.getElementById('fiados-table');
+            tableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Cargando deudores...</td></tr>';
+            try {
+                const response = await fetch(`${API_URL}/fiados/pending`);
+                const data = await response.json();
+                tableBody.innerHTML = data.length > 0 ?
+                    data.map(cliente => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm font-medium">${cliente.name}</td>
+                            <td class="px-4 py-3 text-sm">${cliente.cedula || 'N/A'}</td>
+                            <td class="px-4 py-3 text-sm">${cliente.phone || 'N/A'}</td>
+                            <td class="px-4 py-3 text-sm text-right font-bold text-red-600">${formatCurrency(cliente.total_fiado)}</td>
+                        </tr>`).join('') :
+                    '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">🎉 No hay clientes con deudas pendientes.</td></tr>';
+            } catch (error) {
+                console.error('Error loading fiados:', error);
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-red-500">Error al cargar deudores</td></tr>';
+            }
+        }
+
+        // Cargar Reportes
+        async function loadReports() {
+            const profitEl = document.getElementById('profit-report');
+            const paymentEl = document.getElementById('payment-methods');
+            const stagnantEl = document.getElementById('stagnant-products-report');
+            const userSalesEl = document.getElementById('sales-by-user-report');
+            const disbursementsEl = document.getElementById('disbursements-report');
+
+            const loadingHTML = '<div class="text-center py-8 text-gray-400">Cargando...</div>';
+            profitEl.innerHTML = loadingHTML;
+            paymentEl.innerHTML = loadingHTML;
+            stagnantEl.innerHTML = loadingHTML;
+            userSalesEl.innerHTML = loadingHTML;
+            disbursementsEl.innerHTML = loadingHTML;
+
+            try {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
+
+                // Reporte de Ganancia Real
+                const profitResponse = await fetch(`${API_URL}/reports/profit?start_date=${startDate}&end_date=${endDate}`);
+                const profitData = await profitResponse.json();
+                const profitDailyRows = profitData.daily.map(row => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm">${new Date(row.sale_date).toLocaleDateString('es-DO')}</td>
+                        <td class="px-4 py-3 text-sm text-right">${formatCurrency(row.total_revenue)}</td>
+                        <td class="px-4 py-3 text-sm text-right text-red-600">${formatCurrency(row.total_cost)}</td>
+                        <td class="px-4 py-3 text-sm text-right font-medium text-green-600">${formatCurrency(row.total_profit)}</td>
+                    </tr>`).join('');
+                const profitTotalRow = `
+                    <tr class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                        <td class="px-4 py-3 text-sm uppercase">Total General</td>
+                        <td class="px-4 py-3 text-sm text-right">${formatCurrency(profitData.totals.total_revenue || 0)}</td>
+                        <td class="px-4 py-3 text-sm text-right text-red-600">${formatCurrency(profitData.totals.total_cost || 0)}</td>
+                        <td class="px-4 py-3 text-sm text-right font-bold text-green-700">${formatCurrency(profitData.totals.total_profit || 0)}</td>
+                    </tr>
+                    <tr class="bg-gray-100 font-bold">
+                        <td colspan="3" class="px-4 py-2 text-sm text-right uppercase">Margen de Ganancia Total</td>
+                        <td class="px-4 py-2 text-sm text-right font-bold">${profitData.totals.profit_margin || 0}%</td>
+                    </tr>`;
+                profitEl.innerHTML = profitData.daily.length > 0 ? `
+                    <table class="min-w-full"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costos</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ganancia Real</th>
+                    </tr></thead>
+                    <tbody class="bg-white divide-y divide-gray-200">${profitDailyRows}</tbody>
+                    <tfoot class="bg-gray-100">${profitTotalRow}</tfoot>
+                    </table>` : '<div class="text-center py-8 text-gray-400">No hay datos de ganancias</div>';
+
+                // Reporte de Desembolsos
+                const disbursementsResponse = await fetch(`${API_URL}/reports/disbursements?start_date=${startDate}&end_date=${endDate}`);
+                const disbData = await disbursementsResponse.json();
+                const disbSummaryHTML = disbData.summary.length > 0 ? `
+                    <h4 class="text-md font-semibold mb-2">Resumen por Razón</h4>
+                    <table class="min-w-full mb-4"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Razón</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Veces</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    </tr></thead><tbody class="bg-white divide-y divide-gray-200">
+                    ${disbData.summary.map(row => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 text-sm font-medium">${row.reason}</td><td class="px-4 py-3 text-sm text-right">${row.count}</td><td class="px-4 py-3 text-sm text-right font-medium text-red-600">${formatCurrency(row.total_amount)}</td></tr>`).join('')}
+                    </tbody>
+                    <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300"><tr><td colspan="2" class="px-4 py-3 text-sm text-right uppercase">Total Desembolsado</td><td class="px-4 py-3 text-sm text-right">${formatCurrency(disbData.total || 0)}</td></tr></tfoot>
+                    </table>` : '';
+                const disbDetailsHTML = disbData.details.length > 0 ? `
+                    <h4 class="text-md font-semibold mt-4 mb-2">Detalle de Desembolsos</h4>
+                    <table class="min-w-full"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Razón</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+                    </tr></thead><tbody class="bg-white divide-y divide-gray-200">
+                    ${disbData.details.map(row => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 text-sm">${formatDate(row.created_at)}</td><td class="px-4 py-3 text-sm">${row.reason}</td><td class="px-4 py-3 text-sm">${row.user_name || 'N/A'}</td><td class="px-4 py-3 text-sm text-right text-red-600">${formatCurrency(row.amount)}</td></tr>`).join('')}
+                    </tbody></table>` : '';
+                disbursementsEl.innerHTML = (disbData.summary.length > 0 || disbData.details.length > 0)
+                    ? disbSummaryHTML + disbDetailsHTML
+                    : '<div class="text-center py-8 text-gray-400">No hubo desembolsos en este período.</div>';
+
+                // Reporte: Rendimiento por Vendedor
+                const userSalesResponse = await fetch(`${API_URL}/reports/sales-by-user?start_date=${startDate}&end_date=${endDate}`);
+                const userSalesData = await userSalesResponse.json();
+                userSalesEl.innerHTML = userSalesData.length > 0 ? `
+                    <table class="min-w-full"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendedor</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transacciones</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Vendido</th>
+                    </tr></thead><tbody class="bg-white divide-y divide-gray-200">
+                    ${userSalesData.map(row => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 text-sm font-medium">${row.user_name}</td><td class="px-4 py-3 text-sm text-right">${row.transaction_count}</td><td class="px-4 py-3 text-sm text-right font-medium">${formatCurrency(row.total_revenue)}</td></tr>`).join('')}
+                    </tbody></table>` : '<div class="text-center py-8 text-gray-400">No hay datos de ventas por vendedor</div>';
+
+                // Reporte: Productos Estancados
+                const stagnantResponse = await fetch(`${API_URL}/reports/stagnant-products?start_date=${startDate}&end_date=${endDate}`);
+                const stagnantData = await stagnantResponse.json();
+                stagnantEl.innerHTML = stagnantData.length > 0 ? `
+                    <table class="min-w-full"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stock Actual</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo en Inventario</th>
+                    </tr></thead><tbody class="bg-white divide-y divide-gray-200">
+                    ${stagnantData.map(row => `<tr class="hover:bg-gray-50"><td class="px-4 py-3 text-sm font-medium">${row.name}</td><td class="px-4 py-3 text-sm text-right">${row.stock}</td><td class="px-4 py-3 text-sm text-right font-medium text-red-600">${formatCurrency(row.value_in_stock || 0)}</td></tr>`).join('')}
+                    </tbody></table>` : '<div class="text-center py-8 text-gray-400">🎉 Todos los productos se han vendido al menos una vez en este período.</div>';
+
+                // Reporte de Métodos de Pago
+                const paymentResponse = await fetch(`${API_URL}/reports/payment-methods?start_date=${startDate}&end_date=${endDate}`);
+                const paymentData = await paymentResponse.json();
+                paymentEl.innerHTML = paymentData.length > 0 ?
+                    paymentData.map(method => `
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded">
+                            <div>
+                                <p class="font-medium">${method.payment_method === 'cash' ? '💵 Efectivo' : '💳 Tarjeta'}</p>
+                                <p class="text-sm text-gray-500">${method.transaction_count} transacciones</p>
+                            </div>
+                            <p class="text-xl font-bold">${formatCurrency(method.total_amount)}</p>
+                        </div>`).join('') : '<div class="text-center py-8 text-gray-400">No hay datos</div>';
+
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                const errorHTML = '<div class="text-center py-8 text-red-500">Error al cargar este reporte</div>';
+                profitEl.innerHTML = errorHTML;
+                paymentEl.innerHTML = errorHTML;
+                stagnantEl.innerHTML = errorHTML;
+                userSalesEl.innerHTML = errorHTML;
+                disbursementsEl.innerHTML = errorHTML;
+            }
+        }
+
+        // Función principal de carga
+        function loadData() {
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('es-DO');
+            const activeTab = document.querySelector('.tab-button.active').id;
+
+            if (activeTab === 'tab-overview') loadDashboardStats();
+            if (activeTab === 'tab-sales') loadSales();
+            if (activeTab === 'tab-inventory') loadInventory();
+            if (activeTab === 'tab-fiados') loadFiados();
+            if (activeTab === 'tab-reports') loadReports();
+        }
+
+        // Carga inicial
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDashboardStats(); // Carga el resumen por defecto
+        });
+    </script>
+
+</body>
+</html>
